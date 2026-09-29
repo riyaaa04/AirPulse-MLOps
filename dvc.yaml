@@ -1,0 +1,26 @@
+stages:
+  prepare:
+    cmd: python3 src/data_prep.py
+    deps:
+      - dataset/city_day.csv
+      - src/data_prep.py
+    outs:
+      - data/processed/clean_city_day.csv
+
+  feature_engineering:
+    cmd: python3 src/feature_engineering.py
+    deps:
+      - data/processed/clean_city_day.csv
+      - src/feature_engineering.py
+    outs:
+      - data/processed/X_features.csv
+      - data/processed/y_target.csv
+
+  train:
+    cmd: python3 src/train.py
+    deps:
+      - data/processed/clean_city_day.csv
+      - src/train.py
+    outs:
+      - models/best_model.pkl
+      - models/preprocessor.pkl
