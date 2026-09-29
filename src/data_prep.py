@@ -20,25 +20,30 @@ def clean_and_impute_data(df: pd.DataFrame) -> pd.DataFrame:
       4. Compute target AQI where missing based on CPCB formula if needed, or drop missing target rows.
     """
     df = df.copy()
-    df['Date'] = pd.to_datetime(df['Date'])
-    df = df.sort_values(by=['City', 'Date']).reset_index(drop=True)
+    if 'Date' in df.columns:
+        df['Date'] = pd.to_datetime(df['Date'])
+    if 'City' in df.columns and 'Date' in df.columns:
+        df = df.sort_values(by=['City', 'Date']).reset_index(drop=True)
 
     pollutant_cols = ['PM2.5', 'PM10', 'NO', 'NO2', 'NOx', 'NH3', 'CO', 'SO2', 'O3', 'Benzene', 'Toluene', 'Xylene']
     
     # Forward fill within each city group to leverage time continuity
     for col in pollutant_cols:
-        df[col] = df.groupby('City')[col].ffill()
-        df[col] = df.groupby('City')[col].bfill()
-        # Fallback to overall column median if a city has no data at all
-        median_val = df[col].median()
-        df[col] = df[col].fillna(median_val if not pd.isna(median_val) else 0.0)
+        if col in df.columns:
+            if 'City' in df.columns:
+                df[col] = df.groupby('City')[col].ffill()
+                df[col] = df.groupby('City')[col].bfill()
+            else:
+                df[col] = df[col].ffill().bfill()
+            median_val = df[col].median()
+            df[col] = df[col].fillna(median_val if not pd.isna(median_val) else 0.0)
 
     # Impute missing target AQI if missing using PM2.5 proxy or drop row if no target
     if 'AQI' in df.columns:
         df = df.dropna(subset=['AQI']).reset_index(drop=True)
 
     # Create AQI Bucket if missing
-    if 'AQI_Bucket' in df.columns:
+    if 'AQI_Bucket' in df.columns and 'AQI' in df.columns:
         df['AQI_Bucket'] = df['AQI_Bucket'].fillna(df['AQI'].apply(get_aqi_bucket))
 
     return df
